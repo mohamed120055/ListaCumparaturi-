@@ -516,6 +516,7 @@ body {
     <div class="export-modal-handle"></div>
     <div class="export-modal-title">📤 Export القائمة</div>
     <div class="export-options">
+      <button class="export-option-btn" id="exportHTML">🖨️ Exportă Document (HTML/PDF)</button>
       <button class="export-option-btn" id="exportCSV">📄 Exportă CSV</button>
       <button class="export-option-btn" id="exportJSON">📋 Exportă JSON</button>
       <button class="export-option-btn" id="exportText">📝 Exportă text</button>
@@ -1081,6 +1082,115 @@ document.getElementById('exportBtn').addEventListener('click', () => {
 });
 document.getElementById('exportModal').addEventListener('click', e => {
   if(e.target===document.getElementById('exportModal')) document.getElementById('exportModal').classList.remove('open');
+});
+
+document.getElementById('exportHTML').addEventListener('click', () => {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ro-RO', {day:'2-digit',month:'long',year:'numeric'});
+
+  // Group items by category
+  const catOrder = Object.keys(CATS);
+  const groups = {};
+  items.forEach(i => { if(!groups[i.cat]) groups[i.cat]=[]; groups[i.cat].push(i); });
+
+  const pendingItems = items.filter(i=>!i.purchased);
+  const purchasedItems = items.filter(i=>i.purchased);
+
+  const catColors = {
+    Food:'#FF6B6B',Drinks:'#4ECDC4',Dairy:'#60A5FA',Fruits:'#F97316',
+    Vegetables:'#22C55E',Meat:'#EF4444',Bakery:'#D97706',Frozen:'#818CF8',
+    Snacks:'#EC4899',Sweets:'#F43F5E',Baby:'#FB7185',Pets:'#A78BFA',
+    Medicine:'#10B981',Pharmacy:'#059669',Care:'#FFB347',Cleaning:'#45B7D1',
+    Laundry:'#38BDF8',Kitchen:'#F59E0B',Bathroom:'#06B6D4',Electronics:'#6366F1',
+    Home:'#98D8A8',Garden:'#84CC16',Office:'#94A3B8',Other:'#9CA3AF'
+  };
+
+  function renderTableRows(list) {
+    return list.map((i,idx) => {
+      const cfg = CATS[i.cat]||{icon:'📦',label:i.cat};
+      const color = catColors[i.cat]||'#9CA3AF';
+      return `<tr style="background:${idx%2===0?'#fff':'#f9fafb'}">
+        <td style="padding:10px 14px;font-weight:600;color:#1A1A2E">${cfg.icon} ${i.name}</td>
+        <td style="padding:10px 14px"><span style="background:${color}22;color:${color};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600">${cfg.label}</span></td>
+        <td style="padding:10px 14px;color:#6B7280">👤 ${i.person}</td>
+        <td style="padding:10px 14px;font-size:12px;color:#6B7280">${i.day||''}<br>${i.date} ${i.time}</td>
+        <td style="padding:10px 14px;font-size:12px;color:#9CA3AF;font-style:italic">${i.comment||'-'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Lista Cumpărături — ${dateStr}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 32px; background: #F0F2FF; color: #1A1A2E; }
+  .doc { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 30px rgba(0,0,0,0.1); }
+  .doc-header { background: linear-gradient(135deg, #6C63FF, #8B5CF6); padding: 32px; color: #fff; }
+  .doc-header h1 { font-size: 28px; font-weight: 800; margin: 0 0 6px; }
+  .doc-header p { margin: 0; opacity: 0.85; font-size: 14px; }
+  .stats-row { display: flex; gap: 16px; padding: 20px 32px; background: #F0F2FF; }
+  .stat { flex: 1; background: #fff; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .stat-n { font-size: 28px; font-weight: 800; }
+  .stat-l { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .section { padding: 24px 32px; }
+  .section-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  table { width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  th { background: #6C63FF; color: #fff; padding: 12px 14px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:hover { background: #F5F3FF !important; }
+  .footer { text-align: center; padding: 20px; font-size: 12px; color: #9CA3AF; border-top: 1px solid #E5E7EB; }
+  @media print {
+    body { background: white; padding: 0; }
+    .doc { box-shadow: none; border-radius: 0; }
+    .no-print { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="doc">
+  <div class="doc-header">
+    <h1>🛒 Lista Cumpărături</h1>
+    <p>Generat pe ${dateStr} • ${now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'})}</p>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat"><div class="stat-n" style="color:#6C63FF">${items.length}</div><div class="stat-l">Total</div></div>
+    <div class="stat"><div class="stat-n" style="color:#F59E0B">${pendingItems.length}</div><div class="stat-l">În așteptare</div></div>
+    <div class="stat"><div class="stat-n" style="color:#10B981">${purchasedItems.length}</div><div class="stat-l">Cumpărate</div></div>
+  </div>
+
+  ${pendingItems.length > 0 ? `
+  <div class="section">
+    <div class="section-title">⏳ <span style="color:#F59E0B">În așteptare (${pendingItems.length})</span></div>
+    <table>
+      <tr><th>Produs</th><th>Categorie</th><th>Persoană</th><th>Dată</th><th>Comentariu</th></tr>
+      ${renderTableRows(pendingItems)}
+    </table>
+  </div>` : ''}
+
+  ${purchasedItems.length > 0 ? `
+  <div class="section">
+    <div class="section-title">✅ <span style="color:#10B981">Cumpărate (${purchasedItems.length})</span></div>
+    <table>
+      <tr><th>Produs</th><th>Categorie</th><th>Persoană</th><th>Dată</th><th>Comentariu</th></tr>
+      ${renderTableRows(purchasedItems)}
+    </table>
+  </div>` : ''}
+
+  <div class="footer">Lista Cumpărături • Made with ❤️ by the family</div>
+</div>
+<div class="no-print" style="text-align:center;margin-top:20px">
+  <button onclick="window.print()" style="padding:12px 32px;background:linear-gradient(135deg,#6C63FF,#8B5CF6);color:#fff;border:none;border-radius:50px;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 15px rgba(108,99,255,0.4)">🖨️ Printează / Salvează PDF</button>
+</div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  document.getElementById('exportModal').classList.remove('open');
+  showToast('🖨️ Document deschis!');
 });
 
 document.getElementById('exportCSV').addEventListener('click', () => {
