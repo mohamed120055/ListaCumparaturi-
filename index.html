@@ -739,44 +739,56 @@ function getDayName(ts) {
 }
 
 function initFirebase() {
-  const app = initializeApp(firebaseConfig);
-  db = getDatabase(app);
-  itemsRef = ref(db, 'items');
-
-  // ===== LOAD FROM CACHE INSTANTLY =====
+  // ===== SHOW CACHE INSTANTLY — don't wait for Firebase =====
   const cached = localStorage.getItem('lista_cache');
   if (cached) {
     try {
       items = JSON.parse(cached);
       render();
-      renderHistory();
       if (activeTab==='overview') renderOverview();
-    } catch(e) { /* ignore bad cache */ }
+    } catch(e) {}
   }
 
-  // Show connecting status in sync bar only
-  setSyncStatus('connecting', '🟡 Se conectează...');
+  // Firebase in background — doesn't block anything
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getDatabase(app);
+    itemsRef = ref(db, 'items');
 
-  onValue(itemsRef, (snapshot) => {
-    const data = snapshot.val();
-    items = data ? Object.entries(data).map(([id,val]) => ({id,...val})) : [];
-    // Save to cache for next load
-    localStorage.setItem('lista_cache', JSON.stringify(items));
-    if (!isConnected) {
-      isConnected = true;
-      setSyncStatus('connected', '🟢 Conectat — date sincronizate cu familia');
-    }
-    render();
-    renderHistory();
-    if (activeTab==='overview') renderOverview();
-  }, () => {
-    setSyncStatus('error', '🔴 Eroare conexiune');
-  });
+    setSyncStatus('connecting', '🟡 Se conectează...');
 
-  onValue(ref(db,'.info/connected'), (snap) => {
-    if(snap.val()===true) setSyncStatus('connected','🟢 Conectat — date sincronizate cu familia');
-    else if(isConnected) setSyncStatus('connecting','🟡 Se reconectează...');
-  });
+    // Timeout: if Firebase doesn't respond in 8s, show offline message
+    const timeout = setTimeout(() => {
+      if (!isConnected) {
+        setSyncStatus('error', '🔴 Offline — se afișează date locale');
+      }
+    }, 8000);
+
+    onValue(itemsRef, (snapshot) => {
+      clearTimeout(timeout);
+      const data = snapshot.val();
+      items = data ? Object.entries(data).map(([id,val]) => ({id,...val})) : [];
+      localStorage.setItem('lista_cache', JSON.stringify(items));
+      if (!isConnected) {
+        isConnected = true;
+        setSyncStatus('connected', '🟢 Conectat');
+      }
+      render();
+      renderHistory();
+      if (activeTab==='overview') renderOverview();
+    }, (err) => {
+      clearTimeout(timeout);
+      setSyncStatus('error', '🔴 Offline — se afișează date locale');
+    });
+
+    onValue(ref(db,'.info/connected'), (snap) => {
+      if (snap.val()===true) setSyncStatus('connected','🟢 Conectat');
+      else if (isConnected) setSyncStatus('connecting','🟡 Se reconectează...');
+    });
+
+  } catch(e) {
+    setSyncStatus('error', '🔴 Offline — se afișează date locale');
+  }
 }
 
 function setSyncStatus(state, text) {
