@@ -336,10 +336,19 @@ body {
   <div class="login-title">Lista Cumpărături</div>
   <div class="login-sub">Doar pentru familie 🔒</div>
   <div class="login-card">
-    <label class="login-label" for="passwordInput">🔑 Parolă</label>
-    <input type="password" class="login-input" id="passwordInput" placeholder="••••••••••" autocomplete="current-password">
-    <div class="login-error" id="loginError"></div>
-    <button class="login-btn" id="loginBtn">Intră ←</button>
+    <form id="loginForm" action="javascript:void(0)" autocomplete="on">
+      <label class="login-label" for="passwordInput">🔑 Parolă</label>
+      <input
+        type="password"
+        class="login-input"
+        id="passwordInput"
+        name="password"
+        placeholder="••••••••••"
+        autocomplete="current-password"
+      >
+      <div class="login-error" id="loginError"></div>
+      <button type="submit" class="login-btn" id="loginBtn">Intră ←</button>
+    </form>
     <div class="login-hint">Doar pentru familie — trimite parola persoanelor dorite</div>
   </div>
 </div>
@@ -643,16 +652,16 @@ import { getDatabase, ref, push, onValue, update, remove }
 const CORRECT_PASSWORD = "Ioana2506";
 const SESSION_KEY = "lista_auth";
 
-if (localStorage.getItem(SESSION_KEY) === "yes") showApp();
+if (sessionStorage.getItem(SESSION_KEY) === "yes") showApp();
 
-document.getElementById('loginBtn').addEventListener('click', tryLogin);
+document.getElementById('loginForm').addEventListener('submit', tryLogin);
 document.getElementById('passwordInput').addEventListener('keydown', e => { if(e.key==='Enter') tryLogin(); });
 
 function tryLogin() {
   const val = document.getElementById('passwordInput').value;
   const input = document.getElementById('passwordInput');
   if (val === CORRECT_PASSWORD) {
-    localStorage.setItem(SESSION_KEY, "yes");
+    sessionStorage.setItem(SESSION_KEY, "yes");
     document.getElementById('loginScreen').classList.add('hidden');
     setTimeout(showApp, 500);
   } else {
@@ -674,7 +683,7 @@ function showApp() {
 }
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
-  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
   location.reload();
 });
 
@@ -757,15 +766,7 @@ function initFirebase() {
 
     setSyncStatus('connecting', '🟡 Se conectează...');
 
-    // Timeout: if Firebase doesn't respond in 8s, show offline message
-    const timeout = setTimeout(() => {
-      if (!isConnected) {
-        setSyncStatus('error', '🔴 Offline — se afișează date locale');
-      }
-    }, 8000);
-
     onValue(itemsRef, (snapshot) => {
-      clearTimeout(timeout);
       const data = snapshot.val();
       items = data ? Object.entries(data).map(([id,val]) => ({id,...val})) : [];
       localStorage.setItem('lista_cache', JSON.stringify(items));
@@ -777,8 +778,7 @@ function initFirebase() {
       renderHistory();
       if (activeTab==='overview') renderOverview();
     }, (err) => {
-      clearTimeout(timeout);
-      setSyncStatus('error', '🔴 Offline — se afișează date locale');
+      setSyncStatus('error', '🔴 Eroare conexiune');
     });
 
     onValue(ref(db,'.info/connected'), (snap) => {
