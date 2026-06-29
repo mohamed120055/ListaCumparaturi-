@@ -304,6 +304,25 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { font-size: 14px; color: var(--text-2); font-weight: 500; }
 
+/* OVERVIEW TAB */
+.overview-person-block { background: var(--card); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; box-shadow: var(--shadow-sm); border: 1.5px solid var(--border); }
+.overview-person-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: linear-gradient(135deg, var(--accent) 0%, #8B5CF6 100%); }
+.overview-person-name { font-size: 15px; font-weight: 700; color: #fff; flex: 1; }
+.overview-person-count { background: rgba(255,255,255,0.25); color: #fff; border-radius: 50px; padding: 2px 10px; font-size: 12px; font-weight: 700; }
+.overview-item-row { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); transition: background var(--transition); }
+.overview-item-row:last-child { border-bottom: none; }
+.overview-item-row:hover { background: var(--bg); }
+.overview-item-row.done { opacity: 0.45; }
+.overview-item-row.done .overview-item-name { text-decoration: line-through; }
+.overview-cat-icon { font-size: 18px; flex-shrink: 0; width: 28px; text-align: center; }
+.overview-item-name { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
+.overview-cat-label { font-size: 11px; color: var(--text-3); font-weight: 500; }
+.overview-check { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: all var(--transition); background: var(--card); }
+.overview-check.done { background: #10B981; border-color: #10B981; }
+.overview-check.done::after { content:'✓'; color:#fff; font-size:11px; font-weight:700; }
+.overview-empty { text-align:center; padding: 50px 20px; }
+.overview-section-title { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.8px; padding: 10px 4px 6px; }
+
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; }
 </style>
@@ -349,6 +368,7 @@ body {
   <!-- TABS -->
   <div class="tabs">
     <button class="tab-btn active" data-tab="list">🛒 Listă</button>
+    <button class="tab-btn" data-tab="overview">👁️ Rezumat</button>
     <button class="tab-btn" data-tab="history">📋 Istoric</button>
   </div>
 
@@ -496,13 +516,27 @@ body {
   <!-- HISTORY TAB -->
   <div id="tab-history" style="display:none">
     <div class="history-section">
-      <div class="history-filters">
-        <button class="history-filter-btn active" data-hfilter="all">Toate</button>
+      <div class="history-filters" style="flex-wrap:wrap;gap:6px">
+        <button class="history-filter-btn active" data-hfilter="current-month">Luna aceasta</button>
         <button class="history-filter-btn" data-hfilter="week">Săptămâna aceasta</button>
-        <button class="history-filter-btn" data-hfilter="month">Luna aceasta</button>
+        <button class="history-filter-btn" data-hfilter="last-week">Săptămâna trecută</button>
+        <button class="history-filter-btn" data-hfilter="last-month">Luna trecută</button>
+        <button class="history-filter-btn" data-hfilter="all">Toate</button>
+      </div>
+      <!-- Month picker -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">
+        <select id="historyMonthSelect" style="flex:1;background:var(--card);border:1.5px solid var(--border);border-radius:50px;padding:9px 28px 9px 14px;font-size:13px;color:var(--text);outline:none;cursor:pointer;box-shadow:var(--shadow-sm);appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 fill=%27%236B7280%27 viewBox=%270 0 16 16%27%3E%3Cpath d=%27M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;font-family:inherit">
+        </select>
+        <select id="historyYearSelect" style="width:100px;background:var(--card);border:1.5px solid var(--border);border-radius:50px;padding:9px 28px 9px 14px;font-size:13px;color:var(--text);outline:none;cursor:pointer;box-shadow:var(--shadow-sm);appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 fill=%27%236B7280%27 viewBox=%270 0 16 16%27%3E%3Cpath d=%27M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;font-family:inherit">
+        </select>
       </div>
       <div id="historyList"></div>
     </div>
+  </div>
+
+  <!-- OVERVIEW TAB -->
+  <div id="tab-overview" style="display:none">
+    <div id="overviewContent" style="padding:12px"></div>
   </div>
 
   <footer class="footer">Made with ❤️ by the family — Lista Cumpărături</footer>
@@ -608,7 +642,7 @@ import { getDatabase, ref, push, onValue, update, remove }
 const CORRECT_PASSWORD = "Ioana2506";
 const SESSION_KEY = "lista_auth";
 
-if (sessionStorage.getItem(SESSION_KEY) === "yes") showApp();
+if (localStorage.getItem(SESSION_KEY) === "yes") showApp();
 
 document.getElementById('loginBtn').addEventListener('click', tryLogin);
 document.getElementById('passwordInput').addEventListener('keydown', e => { if(e.key==='Enter') tryLogin(); });
@@ -617,7 +651,7 @@ function tryLogin() {
   const val = document.getElementById('passwordInput').value;
   const input = document.getElementById('passwordInput');
   if (val === CORRECT_PASSWORD) {
-    sessionStorage.setItem(SESSION_KEY, "yes");
+    localStorage.setItem(SESSION_KEY, "yes");
     document.getElementById('loginScreen').classList.add('hidden');
     setTimeout(showApp, 500);
   } else {
@@ -630,7 +664,7 @@ function tryLogin() {
 
 function showApp() {
   document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('loadingOverlay').style.display = 'flex';
+  document.getElementById('loadingOverlay').style.display = 'none'; // hide immediately
   document.getElementById('appWrapper').style.display = 'block';
   document.getElementById('fabBtn').style.display = 'flex';
   initFirebase();
@@ -639,7 +673,7 @@ function showApp() {
 }
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
-  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
   location.reload();
 });
 
@@ -665,7 +699,9 @@ let editId = null;
 let deleteId = null;
 let isConnected = false;
 let activeTab = 'list';
-let historyFilter = 'all';
+let historyFilter = 'current-month';
+let historyMonth = new Date().getMonth(); // 0-11
+let historyYear = new Date().getFullYear();
 
 // ===== CATEGORY CONFIG =====
 const CATS = {
@@ -706,20 +742,21 @@ function initFirebase() {
   db = getDatabase(app);
   itemsRef = ref(db, 'items');
 
+  // Show connecting status in sync bar only
+  setSyncStatus('connecting', '🟡 Se conectează...');
+
   onValue(itemsRef, (snapshot) => {
     const data = snapshot.val();
     items = data ? Object.entries(data).map(([id,val]) => ({id,...val})) : [];
     if (!isConnected) {
       isConnected = true;
       setSyncStatus('connected', '🟢 Conectat — date sincronizate cu familia');
-      document.getElementById('loadingOverlay').classList.add('hidden');
-      setTimeout(() => document.getElementById('loadingOverlay').style.display='none', 500);
     }
     render();
     renderHistory();
+    if (activeTab==='overview') renderOverview();
   }, () => {
-    setSyncStatus('error', '🔴 خطأ في الاتصال');
-    document.getElementById('loadingOverlay').classList.add('hidden');
+    setSyncStatus('error', '🔴 Eroare conexiune');
   });
 
   onValue(ref(db,'.info/connected'), (snap) => {
@@ -766,11 +803,87 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activeTab = btn.dataset.tab;
-    document.getElementById('tab-list').style.display = activeTab==='list' ? 'block' : 'none';
-    document.getElementById('tab-history').style.display = activeTab==='history' ? 'block' : 'none';
+    document.getElementById('tab-list').style.display     = activeTab==='list'     ? 'block' : 'none';
+    document.getElementById('tab-overview').style.display = activeTab==='overview' ? 'block' : 'none';
+    document.getElementById('tab-history').style.display  = activeTab==='history'  ? 'block' : 'none';
     document.getElementById('fabBtn').style.display = activeTab==='list' ? 'flex' : 'none';
-    if (activeTab==='history') renderHistory();
+    if (activeTab==='history') { if (!document.getElementById('historyMonthSelect').options.length) initHistorySelectors(); renderHistory(); }
+    if (activeTab==='overview') renderOverview();
   });
+});
+
+// ===== OVERVIEW =====
+function renderOverview() {
+  const container = document.getElementById('overviewContent');
+  const pending = items.filter(i => !i.purchased);
+
+  if (pending.length === 0) {
+    container.innerHTML = `<div class="overview-empty"><div style="font-size:48px;margin-bottom:12px">🎉</div><div style="font-size:17px;font-weight:600;color:var(--text);margin-bottom:6px">Tot ce e pe listă e cumpărat!</div><div style="font-size:13px;color:var(--text-2)">Nu mai sunt produse în așteptare.</div></div>`;
+    return;
+  }
+
+  // Group by person
+  const PEOPLE = ['Abdo','Adi','Dana','Ioana','Bunica','Duras','Lipici'];
+  const byPerson = {};
+  pending.forEach(i => {
+    if (!byPerson[i.person]) byPerson[i.person] = [];
+    byPerson[i.person].push(i);
+  });
+
+  // Sort people in defined order
+  const sortedPeople = PEOPLE.filter(p => byPerson[p]);
+  // Add any unknown person not in list
+  Object.keys(byPerson).forEach(p => { if (!sortedPeople.includes(p)) sortedPeople.push(p); });
+
+  const personColors = {
+    Abdo:'#6C63FF', Adi:'#10B981', Dana:'#F97316',
+    Ioana:'#EC4899', Bunica:'#F59E0B', Duras:'#45B7D1', Lipici:'#EF4444'
+  };
+
+  container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600;color:var(--text-2)">⏳ ${pending.length} produse în așteptare</div>
+    </div>
+    ${sortedPeople.map(person => {
+      const personItems = byPerson[person];
+      const color = personColors[person] || '#6C63FF';
+      // Group by category within person
+      const byCat = {};
+      personItems.forEach(i => { if(!byCat[i.cat]) byCat[i.cat]=[]; byCat[i.cat].push(i); });
+
+      return `<div class="overview-person-block">
+        <div class="overview-person-header" style="background:linear-gradient(135deg,${color}dd,${color}99)">
+          <span style="font-size:18px">👤</span>
+          <span class="overview-person-name">${person}</span>
+          <span class="overview-person-count">${personItems.length}</span>
+        </div>
+        ${Object.keys(byCat).map(cat => {
+          const cfg = CATS[cat] || {icon:'📦', label:cat};
+          return byCat[cat].map(item => `
+            <div class="overview-item-row ${item.purchased?'done':''}" data-oid="${item.id}">
+              <div class="overview-check ${item.purchased?'done':''}" data-action="ov-toggle"></div>
+              <span class="overview-cat-icon">${cfg.icon}</span>
+              <div style="flex:1;min-width:0">
+                <div class="overview-item-name">${esc(item.name)}</div>
+                ${item.comment ? `<div class="overview-cat-label">💬 ${esc(item.comment)}</div>` : `<div class="overview-cat-label">${cfg.label}</div>`}
+              </div>
+            </div>`).join('');
+        }).join('')}
+      </div>`;
+    }).join('')}`;
+}
+
+document.getElementById('overviewContent').addEventListener('click', async e => {
+  const row = e.target.closest('[data-oid]');
+  if (!row) return;
+  const action = e.target.closest('[data-action]')?.dataset.action;
+  if (action !== 'ov-toggle') return;
+  const id = row.dataset.oid;
+  const item = items.find(i=>i.id===id);
+  if (!item) return;
+  try {
+    await update(ref(db,'items/'+id), { purchased: !item.purchased });
+  } catch { showToast('❌ Eroare'); }
 });
 
 // ===== ADD ITEM =====
@@ -997,11 +1110,57 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
 });
 
 // ===== HISTORY =====
+const MONTHS_RO = ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie','Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'];
+
+function initHistorySelectors() {
+  const monthSel = document.getElementById('historyMonthSelect');
+  const yearSel = document.getElementById('historyYearSelect');
+
+  // Populate months
+  MONTHS_RO.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i; opt.textContent = m;
+    if (i === historyMonth) opt.selected = true;
+    monthSel.appendChild(opt);
+  });
+
+  // Populate years (current year - 2 to current year)
+  const curYear = new Date().getFullYear();
+  for (let y = curYear; y >= curYear - 2; y--) {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    if (y === historyYear) opt.selected = true;
+    yearSel.appendChild(opt);
+  }
+
+  monthSel.addEventListener('change', () => {
+    historyMonth = parseInt(monthSel.value);
+    historyFilter = 'pick-month';
+    document.querySelectorAll('.history-filter-btn').forEach(b=>b.classList.remove('active'));
+    renderHistory();
+  });
+
+  yearSel.addEventListener('change', () => {
+    historyYear = parseInt(yearSel.value);
+    historyFilter = 'pick-month';
+    document.querySelectorAll('.history-filter-btn').forEach(b=>b.classList.remove('active'));
+    renderHistory();
+  });
+}
+
 document.querySelectorAll('.history-filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.history-filter-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     historyFilter = btn.dataset.hfilter;
+    // Sync month/year selectors back to current month when clicking buttons
+    if (historyFilter === 'current-month') {
+      const now = new Date();
+      historyMonth = now.getMonth();
+      historyYear = now.getFullYear();
+      document.getElementById('historyMonthSelect').value = historyMonth;
+      document.getElementById('historyYearSelect').value = historyYear;
+    }
     renderHistory();
   });
 });
@@ -1011,18 +1170,47 @@ function renderHistory() {
   let purchased = items.filter(i=>i.purchased);
 
   const now = new Date();
-  if(historyFilter==='week') {
-    const weekStart = new Date(now); weekStart.setDate(now.getDate()-now.getDay()); weekStart.setHours(0,0,0,0);
+
+  if (historyFilter === 'current-month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end   = new Date(now.getFullYear(), now.getMonth()+1, 1);
+    purchased = purchased.filter(i=>i.ts>=start.getTime() && i.ts<end.getTime());
+  } else if (historyFilter === 'week') {
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0,0,0,0);
     purchased = purchased.filter(i=>i.ts >= weekStart.getTime());
-  } else if(historyFilter==='month') {
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    purchased = purchased.filter(i=>i.ts >= monthStart.getTime());
+  } else if (historyFilter === 'last-week') {
+    const thisWeekStart = new Date(now);
+    thisWeekStart.setDate(now.getDate() - now.getDay());
+    thisWeekStart.setHours(0,0,0,0);
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    purchased = purchased.filter(i=>i.ts>=lastWeekStart.getTime() && i.ts<thisWeekStart.getTime());
+  } else if (historyFilter === 'last-month') {
+    const start = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    const end   = new Date(now.getFullYear(), now.getMonth(), 1);
+    purchased = purchased.filter(i=>i.ts>=start.getTime() && i.ts<end.getTime());
+  } else if (historyFilter === 'pick-month') {
+    const start = new Date(historyYear, historyMonth, 1);
+    const end   = new Date(historyYear, historyMonth+1, 1);
+    purchased = purchased.filter(i=>i.ts>=start.getTime() && i.ts<end.getTime());
   }
+  // 'all' = no filter
 
   purchased.sort((a,b)=>b.ts-a.ts);
 
+  // Title for current filter
+  let filterTitle = '';
+  if (historyFilter==='current-month') filterTitle = `📅 ${MONTHS_RO[now.getMonth()]} ${now.getFullYear()}`;
+  else if (historyFilter==='week') filterTitle = '📅 Săptămâna aceasta';
+  else if (historyFilter==='last-week') filterTitle = '📅 Săptămâna trecută';
+  else if (historyFilter==='last-month') { const lm = new Date(now.getFullYear(), now.getMonth()-1,1); filterTitle = `📅 ${MONTHS_RO[lm.getMonth()]} ${lm.getFullYear()}`; }
+  else if (historyFilter==='pick-month') filterTitle = `📅 ${MONTHS_RO[historyMonth]} ${historyYear}`;
+  else filterTitle = '📅 Tot istoricul';
+
   if(purchased.length===0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Niciun istoric</div><div class="empty-sub">Produsele cumpărate vor apărea aici</div></div>`;
+    container.innerHTML = `<div style="text-align:center;padding:8px 0 4px;font-size:13px;font-weight:600;color:var(--accent);margin-bottom:10px">${filterTitle}</div><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Niciun produs</div><div class="empty-sub">Nu există produse cumpărate în această perioadă</div></div>`;
     return;
   }
 
@@ -1035,7 +1223,9 @@ function renderHistory() {
     groups[key].push(i);
   });
 
-  container.innerHTML = Object.entries(groups).map(([key, grpItems]) => {
+  const summary = `<div style="text-align:center;padding:8px 0 12px;font-size:13px;font-weight:600;color:var(--accent)">${filterTitle} — <span style="color:#10B981">${purchased.length} produse cumpărate</span></div>`;
+
+  container.innerHTML = summary + Object.entries(groups).map(([key, grpItems]) => {
     const [date, day] = key.split('|');
     return `<div class="history-group-title">📅 ${day} • ${date}</div>` +
       grpItems.map(item => {
