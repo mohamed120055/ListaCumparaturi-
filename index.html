@@ -77,7 +77,8 @@ body {
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
 /* SYNC */
-.sync-bar { display: flex; align-items: center; gap: 8px; padding: 6px 16px; background: var(--card); font-size: 11px; font-weight: 600; border-bottom: 1px solid var(--border); justify-content: center; }
+.sync-bar { display: flex; align-items: center; gap: 6px; padding: 3px 16px; background: var(--card); font-size: 10px; font-weight: 500; border-bottom: 1px solid var(--border); justify-content: center; transition: all 0.3s ease; overflow: hidden; max-height: 24px; }
+.sync-bar.connected { max-height: 0; padding: 0; border: none; opacity: 0; }
 .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #9CA3AF; transition: background 0.3s; flex-shrink: 0; }
 .sync-dot.connected { background: #10B981; box-shadow: 0 0 6px #10B981; }
 .sync-dot.connecting { background: #F59E0B; animation: pulse 1s infinite; }
@@ -372,7 +373,7 @@ body {
     <button class="tab-btn" data-tab="history">📋 Istoric</button>
   </div>
 
-  <div class="sync-bar">
+  <div class="sync-bar" id="syncBar">
     <div class="sync-dot connecting" id="syncDot"></div>
     <span class="sync-text" id="syncText">Se conectează...</span>
   </div>
@@ -742,12 +743,25 @@ function initFirebase() {
   db = getDatabase(app);
   itemsRef = ref(db, 'items');
 
+  // ===== LOAD FROM CACHE INSTANTLY =====
+  const cached = localStorage.getItem('lista_cache');
+  if (cached) {
+    try {
+      items = JSON.parse(cached);
+      render();
+      renderHistory();
+      if (activeTab==='overview') renderOverview();
+    } catch(e) { /* ignore bad cache */ }
+  }
+
   // Show connecting status in sync bar only
   setSyncStatus('connecting', '🟡 Se conectează...');
 
   onValue(itemsRef, (snapshot) => {
     const data = snapshot.val();
     items = data ? Object.entries(data).map(([id,val]) => ({id,...val})) : [];
+    // Save to cache for next load
+    localStorage.setItem('lista_cache', JSON.stringify(items));
     if (!isConnected) {
       isConnected = true;
       setSyncStatus('connected', '🟢 Conectat — date sincronizate cu familia');
@@ -766,8 +780,13 @@ function initFirebase() {
 }
 
 function setSyncStatus(state, text) {
-  document.getElementById('syncDot').className = 'sync-dot ' + state;
-  document.getElementById('syncText').textContent = text;
+  const bar = document.getElementById('syncBar');
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncText');
+  dot.className = 'sync-dot ' + state;
+  txt.textContent = text;
+  if (state === 'connected') bar.classList.add('connected');
+  else bar.classList.remove('connected');
 }
 
 // ===== CLOCK =====
