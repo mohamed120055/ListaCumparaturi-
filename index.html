@@ -144,23 +144,6 @@ body {
 .error-msg { font-size: 11px; color: #EF4444; margin-top: 3px; display: none; }
 .error-msg.show { display: block; }
 
-/* PHOTO UPLOAD */
-.photo-upload-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border: 1.5px dashed var(--border); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--text-2); cursor: pointer; transition: all var(--transition); font-family: inherit; }
-.photo-upload-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-.photo-preview-wrap { position: relative; display: inline-block; margin-top: 4px; }
-.photo-preview-img { width: 84px; height: 84px; object-fit: cover; border-radius: var(--radius-sm); border: 1.5px solid var(--border); display: block; }
-.photo-remove-btn { position: absolute; top: -7px; right: -7px; width: 22px; height: 22px; border-radius: 50%; background: #EF4444; color: #fff; border: 2px solid var(--card); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
-.photo-remove-btn:hover { background: #DC2626; }
-
-/* ITEM PHOTO THUMBNAIL */
-.item-photo { width: 100%; max-width: 140px; height: 90px; object-fit: cover; border-radius: var(--radius-sm); margin-top: 6px; display: block; cursor: pointer; border: 1.5px solid var(--border); }
-
-/* LIGHTBOX */
-.lightbox-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: none; align-items: center; justify-content: center; padding: 24px; }
-.lightbox-overlay.open { display: flex; }
-.lightbox-overlay img { max-width: 100%; max-height: 100%; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-.lightbox-close { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff; border: none; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
 /* CATEGORY COLORS */
 .cat-Food { --ccolor: #FF6B6B; --cbg: #FFF0F0; }
 .cat-Drinks { --ccolor: #4ECDC4; --cbg: #E8FAFA; }
@@ -588,15 +571,6 @@ body {
           <label class="form-label">📝 Comentariu (opțional)</label>
           <textarea class="form-textarea" id="fComment" placeholder="ex: 1.5L, fără zahăr..."></textarea>
         </div>
-        <div class="form-group">
-          <label class="form-label">📷 Poză (opțional)</label>
-          <input type="file" accept="image/*" id="fPhoto" style="display:none">
-          <button type="button" class="photo-upload-btn" id="photoUploadBtn">📷 Adaugă poză</button>
-          <div class="photo-preview-wrap" id="photoPreviewWrap" style="display:none">
-            <img id="photoPreviewImg" class="photo-preview-img">
-            <button type="button" class="photo-remove-btn" id="photoRemoveBtn">✕</button>
-          </div>
-        </div>
         <button class="save-btn" id="saveBtn"><span>💾</span> Salvează</button>
       </div>
 
@@ -705,15 +679,6 @@ body {
       <label class="form-label">📝 Comentariu</label>
       <textarea class="form-textarea" id="eFComment"></textarea>
     </div>
-    <div class="form-group">
-      <label class="form-label">📷 Poză (opțional)</label>
-      <input type="file" accept="image/*" id="eFPhoto" style="display:none">
-      <button type="button" class="photo-upload-btn" id="ePhotoUploadBtn">📷 Adaugă / schimbă poza</button>
-      <div class="photo-preview-wrap" id="ePhotoPreviewWrap" style="display:none">
-        <img id="ePhotoPreviewImg" class="photo-preview-img">
-        <button type="button" class="photo-remove-btn" id="ePhotoRemoveBtn">✕</button>
-      </div>
-    </div>
     <button class="modal-save-btn" id="modalSaveBtn">✅ Salvează modificările</button>
   </div>
 </div>
@@ -729,12 +694,6 @@ body {
       <button class="confirm-yes" id="confirmYes">Șterge</button>
     </div>
   </div>
-</div>
-
-<!-- LIGHTBOX -->
-<div class="lightbox-overlay" id="lightboxOverlay">
-  <button class="lightbox-close" id="lightboxClose">✕</button>
-  <img id="lightboxImg" src="" alt="Poză produs">
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1035,79 +994,6 @@ dropdown.addEventListener('click', e => {
   showErr('err-person', false);
 });
 
-// ===== PHOTO HANDLING =====
-let formPhotoData = null;
-let editPhotoData = null;
-
-function compressImage(file, maxSize = 700, quality = 0.65) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > height && width > maxSize) { height = Math.round(height * (maxSize / width)); width = maxSize; }
-        else if (height > maxSize) { width = Math.round(width * (maxSize / height)); height = maxSize; }
-        const canvas = document.createElement('canvas');
-        canvas.width = width; canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function setPhotoPreview(wrapId, imgId, dataUrl) {
-  const wrap = document.getElementById(wrapId);
-  const img = document.getElementById(imgId);
-  if (dataUrl) { img.src = dataUrl; wrap.style.display = 'inline-block'; }
-  else { img.src = ''; wrap.style.display = 'none'; }
-}
-
-document.getElementById('photoUploadBtn').addEventListener('click', () => document.getElementById('fPhoto').click());
-document.getElementById('fPhoto').addEventListener('change', async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    formPhotoData = await compressImage(file);
-    setPhotoPreview('photoPreviewWrap', 'photoPreviewImg', formPhotoData);
-  } catch { showToast('❌ Eroare la încărcarea pozei'); }
-  e.target.value = '';
-});
-document.getElementById('photoRemoveBtn').addEventListener('click', () => {
-  formPhotoData = null;
-  setPhotoPreview('photoPreviewWrap', 'photoPreviewImg', null);
-});
-
-document.getElementById('ePhotoUploadBtn').addEventListener('click', () => document.getElementById('eFPhoto').click());
-document.getElementById('eFPhoto').addEventListener('change', async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    editPhotoData = await compressImage(file);
-    setPhotoPreview('ePhotoPreviewWrap', 'ePhotoPreviewImg', editPhotoData);
-  } catch { showToast('❌ Eroare la încărcarea pozei'); }
-  e.target.value = '';
-});
-document.getElementById('ePhotoRemoveBtn').addEventListener('click', () => {
-  editPhotoData = null;
-  setPhotoPreview('ePhotoPreviewWrap', 'ePhotoPreviewImg', null);
-});
-
-document.getElementById('lightboxOverlay').addEventListener('click', e => {
-  if (e.target.id === 'lightboxOverlay' || e.target.id === 'lightboxClose') {
-    document.getElementById('lightboxOverlay').classList.remove('open');
-  }
-});
-function openLightbox(src) {
-  document.getElementById('lightboxImg').src = src;
-  document.getElementById('lightboxOverlay').classList.add('open');
-}
-
 document.getElementById('saveBtn').addEventListener('click', addItem);
 document.getElementById('fName').addEventListener('keydown', e => { if(e.key==='Enter') addItem(); });
 
@@ -1134,7 +1020,6 @@ async function addItem() {
       name, cat,
       person: personStr,
       comment,
-      image: formPhotoData || null,
       date: now.toLocaleDateString('ro-RO', {day:'2-digit',month:'2-digit',year:'numeric'}),
       time: now.toLocaleTimeString('ro-RO', {hour:'2-digit',minute:'2-digit'}),
       day: getDayName(now.getTime()),
@@ -1143,8 +1028,6 @@ async function addItem() {
     });
     document.getElementById('fName').value = '';
     document.getElementById('fComment').value = '';
-    formPhotoData = null;
-    setPhotoPreview('photoPreviewWrap', 'photoPreviewImg', null);
     document.getElementById('fName').focus();
     const msg = persons.length > 1 ? `✅ Salvat pentru ${personStr}!` : '✅ Salvat!';
     showToast(msg);
@@ -1250,6 +1133,17 @@ function renderSection(cat, catItems) {
   return `<div class="category-section cat-${cat}"><div class="category-header"><span>${cfg.icon}</span><span>${cfg.label}</span><span class="cat-count">${catItems.length}</span></div>${catItems.map(renderCard).join('')}</div>`;
 }
 
+// ===== FORMAT COMMENT WITH CLICKABLE LINKS =====
+function formatComment(text) {
+  if (!text) return '';
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return esc(text).replace(urlRegex, (url) => {
+    // url is already escaped, need raw for href
+    const rawUrl = text.match(urlRegex)?.[0] || url;
+    return `<a href="${rawUrl}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;word-break:break-all" onclick="event.stopPropagation()">${url}</a>`;
+  });
+}
+
 function renderCard(item) {
   const cfg = CATS[item.cat] || {label:item.cat,icon:'📦'};
   const dayStr = item.day || getDayName(item.ts||0);
@@ -1262,8 +1156,7 @@ function renderCard(item) {
           <span class="meta-badge badge-person">👤 ${esc(item.person)}</span>
           <span class="meta-badge ${item.purchased?'badge-status-ok':'badge-status-pending'}">${item.purchased?'✅ Cumpărat':'⏳ În așteptare'}</span>
         </div>
-        ${item.comment?`<div class="item-comment">💬 ${esc(item.comment)}</div>`:''}
-        ${item.image?`<img src="${item.image}" class="item-photo" data-action="viewphoto" alt="Poză produs">`:''}
+        ${item.comment?`<div class="item-comment">💬 ${formatComment(item.comment)}</div>`:''}
         <div class="item-datetime">📅 ${dayStr} • ${item.date} &nbsp; 🕒 ${item.time}</div>
       </div>
     </div>
@@ -1286,11 +1179,10 @@ function updateStats() {
 
 // ===== ITEM ACTIONS =====
 document.getElementById('itemsList').addEventListener('click', e => {
-  const action = e.target.closest('[data-action]')?.dataset.action;
-  if(action==='viewphoto') { openLightbox(e.target.src); return; }
   const card = e.target.closest('[data-id]');
   if(!card) return;
   const id = card.dataset.id;
+  const action = e.target.closest('[data-action]')?.dataset.action;
   if(action==='toggle') togglePurchased(id);
   else if(action==='edit') openEdit(id);
   else if(action==='delete') openConfirm(id);
@@ -1313,8 +1205,6 @@ function openEdit(id) {
   document.getElementById('eFCategory').value = item.cat;
   document.getElementById('eFPerson').value = item.person;
   document.getElementById('eFComment').value = item.comment||'';
-  editPhotoData = item.image || null;
-  setPhotoPreview('ePhotoPreviewWrap', 'ePhotoPreviewImg', editPhotoData);
   document.getElementById('editModal').classList.add('open');
 }
 
@@ -1330,7 +1220,6 @@ document.getElementById('modalSaveBtn').addEventListener('click', async () => {
       cat: document.getElementById('eFCategory').value,
       person: document.getElementById('eFPerson').value,
       comment: document.getElementById('eFComment').value.trim(),
-      image: editPhotoData || null,
     });
     document.getElementById('editModal').classList.remove('open'); editId=null;
     showToast('✏️ Modificat cu succes!');
@@ -1479,8 +1368,7 @@ function renderHistory() {
             <span class="meta-badge badge-person">👤 ${esc(item.person)}</span>
             <span class="meta-badge badge-status-ok">✅ Cumpărat</span>
           </div>
-          ${item.comment?`<div class="item-comment">💬 ${esc(item.comment)}</div>`:''}
-          ${item.image?`<img src="${item.image}" class="item-photo" data-action="viewphoto" alt="Poză produs">`:''}
+          ${item.comment?`<div class="item-comment">💬 ${formatComment(item.comment)}</div>`:''}
           <div class="history-datetime">🕒 ${item.time}</div>
         </div>`;
       }).join('');
@@ -1488,8 +1376,6 @@ function renderHistory() {
 }
 
 document.getElementById('historyList').addEventListener('click', async e => {
-  if (e.target.closest('[data-action="viewphoto"]')) { openLightbox(e.target.src); return; }
-
   const btn = e.target.closest('[data-action="readd"]');
   if (btn) {
     const id = btn.dataset.id;
@@ -1498,7 +1384,7 @@ document.getElementById('historyList').addEventListener('click', async e => {
     const now = new Date();
     try {
       await push(itemsRef, {
-        name: item.name, cat: item.cat, person: item.person, comment: item.comment||'', image: item.image||null,
+        name: item.name, cat: item.cat, person: item.person, comment: item.comment||'',
         date: now.toLocaleDateString('ro-RO',{day:'2-digit',month:'2-digit',year:'numeric'}),
         time: now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'}),
         day: getDayName(now.getTime()),
