@@ -703,6 +703,64 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getDatabase, ref, push, onValue, update, remove }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+// ===== FIREBASE CONFIG =====
+const firebaseConfig = {
+  apiKey: "AIzaSyAX_Kf7kXgHE9xYZIbGJlKK7AWjMWpkIAs",
+  authDomain: "lista-cumparaturi-61478.firebaseapp.com",
+  databaseURL: "https://lista-cumparaturi-61478-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "lista-cumparaturi-61478",
+  storageBucket: "lista-cumparaturi-61478.firebasestorage.app",
+  messagingSenderId: "604111519010",
+  appId: "1:604111519010:web:be0a7a8d3a9e2e9440f97b"
+};
+
+let db, itemsRef;
+let items = [];
+let theme = 'light';
+let activeFilter = 'all';
+let activePersons = new Set(['all']);
+let searchQuery = '';
+let sortMode = 'newest';
+let editId = null;
+let deleteId = null;
+let isConnected = false;
+let activeTab = 'list';
+let historyFilter = 'current-month';
+let historyMonth = new Date().getMonth();
+let historyYear = new Date().getFullYear();
+let firebaseInitialized = false;
+let selectedPersonsForm = new Set();
+
+const CATS = {
+  Food:        { label:'Mâncare',     icon:'🍗' },
+  Drinks:      { label:'Băuturi',     icon:'🥤' },
+  Dairy:       { label:'Lactate',     icon:'🥛' },
+  Fruits:      { label:'Fructe',      icon:'🍎' },
+  Vegetables:  { label:'Legume',      icon:'🥦' },
+  Meat:        { label:'Carne',       icon:'🥩' },
+  Bakery:      { label:'Panificație', icon:'🍞' },
+  Frozen:      { label:'Congelate',   icon:'🧊' },
+  Snacks:      { label:'Snacks',      icon:'🍿' },
+  Sweets:      { label:'Dulciuri',    icon:'🍬' },
+  Baby:        { label:'Bebeluși',    icon:'👶' },
+  Pets:        { label:'Animale',     icon:'🐾' },
+  Medicine:    { label:'Medicamente', icon:'💊' },
+  Pharmacy:    { label:'Farmacie',    icon:'🏥' },
+  Care:        { label:'Îngrijire',   icon:'🧴' },
+  Cleaning:    { label:'Curățenie',   icon:'🧹' },
+  Laundry:     { label:'Rufe',        icon:'👕' },
+  Kitchen:     { label:'Bucătărie',   icon:'🍳' },
+  Bathroom:    { label:'Baie',        icon:'🚿' },
+  Electronics: { label:'Electronice', icon:'💡' },
+  Home:        { label:'Casă',        icon:'🏠' },
+  Garden:      { label:'Grădină',     icon:'🌿' },
+  Office:      { label:'Birou',       icon:'📎' },
+  Other:       { label:'Altele',      icon:'📦' },
+};
+
+const DAYS_AR = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
+function getDayName(ts) { return DAYS_AR[new Date(ts).getDay()]; }
+
 // ===== PASSWORD =====
 const CORRECT_PASSWORD = "Ioana2506";
 const SESSION_KEY = "lista_auth";
@@ -727,8 +785,6 @@ function tryLogin() {
   }
 }
 
-let firebaseInitialized = false;
-
 function showApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('loadingOverlay').style.display = 'none';
@@ -747,65 +803,7 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
   location.reload();
 });
 
-// ===== FIREBASE =====
-const firebaseConfig = {
-  apiKey: "AIzaSyAX_Kf7kXgHE9xYZIbGJlKK7AWjMWpkIAs",
-  authDomain: "lista-cumparaturi-61478.firebaseapp.com",
-  databaseURL: "https://lista-cumparaturi-61478-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "lista-cumparaturi-61478",
-  storageBucket: "lista-cumparaturi-61478.firebasestorage.app",
-  messagingSenderId: "604111519010",
-  appId: "1:604111519010:web:be0a7a8d3a9e2e9440f97b"
-};
-
-let db, itemsRef;
-let items = [];
-let theme = 'light';
-let activeFilter = 'all';
-let activePersons = new Set(['all']);
-let searchQuery = '';
-let sortMode = 'newest';
-let editId = null;
-let deleteId = null;
-let isConnected = false;
-let activeTab = 'list';
-let historyFilter = 'current-month';
-let historyMonth = new Date().getMonth(); // 0-11
-let historyYear = new Date().getFullYear();
-
-// ===== CATEGORY CONFIG =====
-const CATS = {
-  Food:        { label:'Mâncare',         icon:'🍗' },
-  Drinks:      { label:'Băuturi',     icon:'🥤' },
-  Dairy:       { label:'Lactate',       icon:'🥛' },
-  Fruits:      { label:'Fructe',       icon:'🍎' },
-  Vegetables:  { label:'Legume',      icon:'🥦' },
-  Meat:        { label:'Carne',        icon:'🥩' },
-  Bakery:      { label:'Panificație',     icon:'🍞' },
-  Frozen:      { label:'Congelate',      icon:'🧊' },
-  Snacks:      { label:'Snacks',       icon:'🍿' },
-  Sweets:      { label:'Dulciuri',      icon:'🍬' },
-  Baby:        { label:'Bebeluși',       icon:'👶' },
-  Pets:        { label:'Animale',     icon:'🐾' },
-  Medicine:    { label:'Medicamente',        icon:'💊' },
-  Pharmacy:    { label:'Farmacie',      icon:'🏥' },
-  Care:        { label:'Îngrijire',       icon:'🧴' },
-  Cleaning:    { label:'Curățenie',       icon:'🧹' },
-  Laundry:     { label:'Rufe',        icon:'👕' },
-  Kitchen:     { label:'Bucătărie',        icon:'🍳' },
-  Bathroom:    { label:'Baie',        icon:'🚿' },
-  Electronics: { label:'Electronice', icon:'💡' },
-  Home:        { label:'Casă',         icon:'🏠' },
-  Garden:      { label:'Grădină',       icon:'🌿' },
-  Office:      { label:'Birou',        icon:'📎' },
-  Other:       { label:'Altele',        icon:'📦' },
-};
-
-const DAYS_AR = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
-
-function getDayName(ts) {
-  return DAYS_AR[new Date(ts).getDay()];
-}
+// ===== FIREBASE INIT =====
 
 function initFirebase() {
   // Show cache instantly
@@ -955,7 +953,6 @@ document.getElementById('overviewContent').addEventListener('click', async e => 
 
 // ===== ADD ITEM =====
 // ===== CUSTOM MULTI-SELECT PERSON DROPDOWN =====
-let selectedPersonsForm = new Set();
 
 const trigger = document.getElementById('personTrigger');
 const dropdown = document.getElementById('personDropdown');
